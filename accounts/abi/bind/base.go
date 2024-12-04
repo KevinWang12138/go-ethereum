@@ -388,6 +388,9 @@ func (c *BoundContract) getNonce(opts *TransactOpts) (uint64, error) {
 // transact executes an actual transaction invocation, first deriving any missing
 // authorization fields, and then scheduling the transaction for execution.
 func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error) {
+	// 判断GasPrice和GasFeeCap GasTipCap是否同时存在，如同时存在，则为异常情况
+	// 在伦敦更新前，交易使用设置GasPrice来奖励矿工，这可能导致GasPrice时高时低，有时候交易还会被一直冷落
+	// 在伦敦更新后，引入了GasFeeCap和GasTipCap，GasTipCap是给矿工的小费，GasFeeCap是自动根据网络拥塞情况生成的给矿工的奖励
 	if opts.GasPrice != nil && (opts.GasFeeCap != nil || opts.GasTipCap != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	}
@@ -396,9 +399,10 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		rawTx *types.Transaction
 		err   error
 	)
-	if opts.GasPrice != nil {
+	if opts.GasPrice != nil { //伦敦更新前的交易创建
 		rawTx, err = c.createLegacyTx(opts, contract, input)
-	} else if opts.GasFeeCap != nil && opts.GasTipCap != nil {
+	} else if opts.GasFeeCap != nil && opts.GasTipCap != nil { //伦敦更新后的交易创建
+		//吐槽，竟然根据费用项来判断走什么流程，而不是版本号之类的东西
 		rawTx, err = c.createDynamicTx(opts, contract, input, nil)
 	} else {
 		// Only query for basefee if gasPrice not specified
