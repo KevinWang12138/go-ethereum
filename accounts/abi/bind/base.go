@@ -390,7 +390,7 @@ func (c *BoundContract) getNonce(opts *TransactOpts) (uint64, error) {
 func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error) {
 	// 判断GasPrice和GasFeeCap GasTipCap是否同时存在，如同时存在，则为异常情况
 	// 在伦敦更新前，交易使用设置GasPrice来奖励矿工，这可能导致GasPrice时高时低，有时候交易还会被一直冷落
-	// 在伦敦更新后，引入了GasFeeCap和GasTipCap，GasTipCap是给矿工的小费，GasFeeCap是自动根据网络拥塞情况生成的给矿工的奖励
+	// 在伦敦更新后，引入了GasFeeCap和GasTipCap，GasTipCap是给矿工的小费，GasFeeCap是设置的最大交易费用
 	if opts.GasPrice != nil && (opts.GasFeeCap != nil || opts.GasTipCap != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	}
@@ -408,7 +408,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		// Only query for basefee if gasPrice not specified
 		if head, errHead := c.transactor.HeaderByNumber(ensureContext(opts.Context), nil); errHead != nil {
 			return nil, errHead
-		} else if head.BaseFee != nil {
+		} else if head.BaseFee != nil { //用户没有设置最大支付费和小费，则使用basefee进行交易消耗
 			rawTx, err = c.createDynamicTx(opts, contract, input, head)
 		} else {
 			// Chain is not London ready -> use legacy transaction
@@ -426,9 +426,11 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	if err != nil {
 		return nil, err
 	}
+	//当开发者不希望交易被发布的时候，只返回签名
 	if opts.NoSend {
 		return signedTx, nil
 	}
+	//将交易发布到网络中
 	if err := c.transactor.SendTransaction(ensureContext(opts.Context), signedTx); err != nil {
 		return nil, err
 	}
