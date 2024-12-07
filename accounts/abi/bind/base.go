@@ -55,11 +55,11 @@ type CallOpts struct {
 // TransactOpts is the collection of authorization data required to create a
 // valid Ethereum transaction.
 type TransactOpts struct {
-	From   common.Address // Ethereum account to send the transaction from
+	From   common.Address // 发送者地址 Ethereum account to send the transaction from
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
-	Value      *big.Int         // Funds to transfer along the transaction (nil = 0 = no funds)
+	Value      *big.Int         // 交易的币值，对于调用智能合约可以不设置 Funds to transfer along the transaction (nil = 0 = no funds)
 	GasPrice   *big.Int         // Gas price to use for the transaction execution (nil = gas price oracle)
 	GasFeeCap  *big.Int         // Gas fee cap to use for the 1559 transaction execution (nil = gas price oracle)
 	GasTipCap  *big.Int         // Gas priority fee cap to use for the 1559 transaction execution (nil = gas price oracle)
